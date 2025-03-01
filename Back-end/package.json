@@ -1,10 +1,9 @@
 {
-  "name": "back-end",
+  "name": "masai-hackathon",
   "version": "1.0.0",
-  "main": "src/app.js", 
-  "type": "module",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/app.js"  
+    "start": "node Back-end/src/index.js"
   },
   "keywords": [],
   "author": "",
