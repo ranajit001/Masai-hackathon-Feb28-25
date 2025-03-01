@@ -76,4 +76,4 @@ const sendMessages = async (req,res) => {
 }
 
 
-export{getUsersForSidebar,getMessagesList}
+export{getUsersForSidebar,getMessagesList,sendMessages}
