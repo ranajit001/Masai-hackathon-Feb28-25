@@ -5,6 +5,7 @@ dotenv.config();
 
 import connectDB from "./configs/mongodb.config.js";
 import UserRouter from "./routes/user.route.js";
+import { MessageRoute } from "./routes/message.route.js";
 
 
 
@@ -16,6 +17,7 @@ app.use(cors())
 
 
 app.use('/users',UserRouter);
+app.use('/message',MessageRoute);
 
 
 

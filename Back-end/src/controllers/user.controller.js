@@ -3,6 +3,7 @@ import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import  nodemailer from 'nodemailer';
 import dotnv from 'dotenv';
+import cloudinary from '../configs/cloudinary.js';
 dotnv.config()
 
 import path from 'path';
@@ -11,21 +12,19 @@ import { fileURLToPath } from "url";
 
 
 
-// const generateAccessToken = (user) => jwt.sign({ userId: user.id,role:user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-// const generateRefreshToken = (user) => jwt.sign({ userId: user.id,role:user.role }, process.env.JWT_SECRET,{ expiresIn: '5h' });
-const generateToken = (user) => jwt.sign({ username: user.username, email: user.email, role:user.role }, process.env.JWT_SECRET);
+const generateToken = (user) => jwt.sign({_id:user._id, email: user.email, role:user.role }, process.env.JWT_SECRET);
 
 
 //signup
 const register = async (req, res) => {
-    const { name, username, email, password, profilePic, role } = req.body;
+    const { name, email, password, profilePic, role } = req.body;
     try {
         // Check if email or username already exists
         const emailExists = await UserModel.findOne({ email });
-        const usernameExists = await UserModel.findOne({ username });
+        // const usernameExists = await UserModel.findOne({ username });
         
         if (emailExists) return res.status(400).json({ message: 'This email already exists.' });
-        if (usernameExists) return res.status(400).json({ message: 'This username already exists.' });
+        // if (usernameExists) return res.status(400).json({ message: 'This username already exists.' });
         
         // Hash password
         const hash = await argon2.hash(password);
@@ -33,7 +32,7 @@ const register = async (req, res) => {
         // Create user with hashed password
         const user = await UserModel.create({ 
             name, 
-            username,
+            // username,
             email, 
             password: hash,
             profilePic: profilePic || "",
@@ -42,7 +41,7 @@ const register = async (req, res) => {
         
         res.status(201).json({ 
             name: user.name,
-            username: user.username,
+            // username: user.username,
             email: user.email,
             role: user.role
         });
@@ -56,15 +55,10 @@ const register = async (req, res) => {
 //login
 const login = async (req, res) => {
     try {
-        const { emailOrUsername, password } = req.body; 
+        const { email, password } = req.body; 
 
         // Search for user by either email or username
-        const user = await UserModel.findOne({
-            $or: [
-                { email: emailOrUsername },
-                { username: emailOrUsername }
-            ]
-        });
+        const user = await UserModel.findOne({email});
 
         if (!user) {   
             return res.status(401).json({ message: "Invalid credentials" });
@@ -80,7 +74,7 @@ const login = async (req, res) => {
 
         res.json({
             name: user.name,
-            username: user.username, 
+           
             email: user.email,
             role: user.role,
             profilePic: user.profilePic,
@@ -131,22 +125,17 @@ const login = async (req, res) => {
 
 const sendResetEmail =   async (req, res) => {
     try {
-        const { emailOrUsername } = req.body;
+        const { email } = req.body;
 
         // Check if the email exists
-        const user = await UserModel.findOne({
-            $or: [
-                { email: emailOrUsername },
-                { username: emailOrUsername }
-            ]
-        });
+        const user = await UserModel.findOne({email});
 
         if (!user) {
             return res.status(404).send("User with this email or Username does not exist");
         }
 
         // Generate reset token (valid for 20 minutes)
-        const resetToken = jwt.sign({ username: user.username, email: user.email, role:user.role },process.env.JWT_SECRET, {expiresIn: "10m"});
+        const resetToken = jwt.sign({id:user._id, email: user.email, role:user.role },process.env.JWT_SECRET, {expiresIn: "10m"});
 
         const resetLink = `http://localhost:${process.env.PORT}/users/reset_password/${resetToken}`;
         // Configure mail transport
@@ -195,7 +184,7 @@ const newPassget = (req, res) => {
 
 
 
-//    UserRouter.post("/reset_password/:token", USernewPasswordSave)
+//   new pasword capturing route
 const newPassPost = async (req, res) => {
     // Extract new password from request body
     const { password } = req.body;
@@ -227,10 +216,38 @@ const newPassPost = async (req, res) => {
 };
 
 
+//profile image updating route
+const updateProfileImag = async(req,res)=>{
+    try {
+        const {profilePic} = req.body;
+        const email = req.body.email;
+
+        if(!profilePic)
+                return res.status(400).send('Profile pic is required...');
+
+        const uploadResponse = await cloudinary.uploader.upload(profilePic);
+        const updatedUser = await UserModel.findOneAndUpdate(
+            { email },  //searching citeria
+           {profilePic:uploadResponse.secure_url},  //have o update
+            { new: true } // gives updated response
+        );
+
+        res.status(200).send(updatedUser)
+    } catch (e) {
+        console.log('error in update profile controller',e);
+        res.status(400).send('server error...')
+    }
+}
+
+
+
+
+
   export {
     register,
     login,
     sendResetEmail,
     newPassget,
-    newPassPost
+    newPassPost,
+    updateProfileImag
 };
